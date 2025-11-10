@@ -1,0 +1,77 @@
+services:
+  vkr-database:
+    image: postgres:18-alpine3.22
+    container_name: vkr-database
+    env_file: ./.env
+    user: postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vkr-db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gresP0st}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB:-vkr-db} -U ${POSTGRES_USER:-postgres}"]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - vkr-inner-network
+    ports:
+      - 5432:5432
+
+  pgadmin:
+    image: dpage/pgadmin4:7.2
+    container_name: vkr-pgadmin
+    env_file: ./.env
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin@mail.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-5678pgadmin}
+      PGADMIN_LISTEN_PORT: 80
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    networks:
+      - vkr-inner-network
+      - vkr-outer-network
+    ports:
+      - 8081:80
+    depends_on:
+      - vkr-database
+  
+# TODO: Add flyway-cli configuration for manual flyway CLI access
+  flyway-migrate:
+    image: flyway/flyway:9.0.0
+    container_name: vkr-flyway_migrations
+    command: migrate
+    volumes:
+      - ./database/migrations:/flyway/sql
+      - ./database/conf:/flyway/conf
+    networks:
+      - vkr-inner-network
+    depends_on:
+      - vkr-database
+    environment:
+      FLYWAY_URL: jdbc:postgresql://vkr-database:5432/${POSTGRES_DB:-vkr-db}
+      FLYWAY_USER: ${POSTGRES_USER:-postgres}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-gresP0st}
+    restart: on-failure:3
+
+
+networks:
+  vkr-inner-network:
+    name: vkr-scinside-internal
+    driver: bridge
+    internal: true
+  vkr-outer-network:
+    name: vkr-scinside-external
+    driver: bridge
+    internal: false
+
+
+volumes:
+  db_data:
+    name: "vkr-volume-db" 
+  pgadmin:
+    name: "vkr-volume-pgadmin"
