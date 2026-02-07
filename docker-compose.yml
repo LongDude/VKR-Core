@@ -57,6 +57,7 @@ services:
       FLYWAY_USER: ${POSTGRES_USER:-postgres}
       FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-gresP0st}
     restart: on-failure:3
+    profiles: [migrate]
 
 
 networks:
