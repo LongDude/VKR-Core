@@ -50,6 +50,11 @@ services:
       - 8081:80
     depends_on:
       - vkr-database
+    deploy:
+      resources:
+        limits:
+          cpus: 1
+          memory: 8G
   
 # TODO: Add flyway-cli configuration for manual flyway CLI access
   flyway-migrate:
