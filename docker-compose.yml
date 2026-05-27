@@ -3,11 +3,14 @@ services:
     image: postgres:18-alpine3.22
     container_name: vkr-database
     env_file: ./.env
-    user: postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-vkr-db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gresP0st}
+    command:
+      - "postgres"
+      - "-c"
+      - "config_file=/etc/postgresql/postgresql.conf"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d ${POSTGRES_DB:-vkr-db} -U ${POSTGRES_USER:-postgres}"]
       interval: 30s
@@ -15,15 +18,23 @@ services:
       retries: 5
       start_period: 30s
     restart: unless-stopped
-    volumes:
-      - db_data:/var/lib/postgresql/data
     networks:
       - vkr-inner-network
+      - vkr-outer-network
+    volumes:
+      - db_data:/var/lib/postgresql/18/docker
+      - ./database/conf/postgresql.conf:/etc/postgresql/postgresql.conf
     ports:
       - 5432:5432
+    deploy:
+      resources:
+        limits:
+          cpus: 4
+          memory: 4G
+
 
   pgadmin:
-    image: dpage/pgadmin4:7.2
+    image: dpage/pgadmin4:9.15
     container_name: vkr-pgadmin
     env_file: ./.env
     environment:
@@ -39,6 +50,11 @@ services:
       - 8081:80
     depends_on:
       - vkr-database
+    deploy:
+      resources:
+        limits:
+          cpus: 1
+          memory: 8G
   
 # TODO: Add flyway-cli configuration for manual flyway CLI access
   flyway-migrate:
@@ -47,7 +63,6 @@ services:
     command: migrate
     volumes:
       - ./database/migrations:/flyway/sql
-      - ./database/conf:/flyway/conf
     networks:
       - vkr-inner-network
     depends_on:
@@ -58,6 +73,8 @@ services:
       FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-gresP0st}
     restart: on-failure:3
     profiles: [migrate]
+
+
 
 
 networks:
@@ -72,7 +89,7 @@ networks:
 
 
 volumes:
-  db_data:
-    name: "vkr-volume-db" 
   pgadmin:
     name: "vkr-volume-pgadmin"
+  db_data:
+    name: "vkr-volume-db" 
