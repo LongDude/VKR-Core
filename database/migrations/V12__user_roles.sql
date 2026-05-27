@@ -1,0 +1,1 @@
+ALTER TABLE users ADD COLUMN roles text[] default ARRAY['ROLE_USER'] not null
