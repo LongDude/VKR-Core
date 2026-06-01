@@ -346,6 +346,7 @@ CREATE TABLE public.users (
     password_hash text NOT NULL,
     password_salt text NOT NULL,
     name text,
+    roles text[] DEFAULT ARRAY['ROLE_USER'::text] NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
